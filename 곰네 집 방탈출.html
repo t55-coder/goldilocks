@@ -1,0 +1,1259 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>곰네 집 방탈출</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap">
+<style>
+/* Layout: sticky case-file bar (timer, lock count, room steps) over a stage that shows one room at a time; each room stacks numbered lock boxes that open one after another, with an evidence notebook beside it (below on phones). */
+:root{
+  --bg:#E8ECE6; --surface:#F6F8F4; --sunk:#DCE2DB; --ink:#13221D; --muted:#53635C; --line:#BFC9C1;
+  --alert:#C42A3F; --ok:#1E7A4C; --ok-soft:#D6EBDD;
+  --tag:#E8B230; --tag-ink:#2B2109; --note:#F3E6A6; --lcd-bg:#14191A; --lcd-fg:#F2C94C;
+  --f-display:"Black Han Sans","Noto Sans KR",sans-serif;
+  --f-body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-type:"Special Elite","Courier New",monospace;
+  --f-mono:"Space Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1815; --surface:#15241F; --sunk:#1D2F29; --ink:#E7EFE9; --muted:#9BADA4; --line:#2D423A;
+    --alert:#FF6A7C; --ok:#5ED19A; --ok-soft:#173B2B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1815; --surface:#15241F; --sunk:#1D2F29; --ink:#E7EFE9; --muted:#9BADA4; --line:#2D423A;
+  --alert:#FF6A7C; --ok:#5ED19A; --ok-soft:#173B2B; color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:0 56px;
+  word-break:keep-all; overflow-wrap:break-word;
+}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); background:var(--bg); z-index:30}
+h1,h2,h3,p,ol,ul,figure{margin:0}
+ol,ul{padding:0; list-style:none}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:3px solid var(--ink); outline-offset:3px}
+.sub{color:var(--muted); font-size:.92rem}
+.typed,.en{font-family:var(--f-type); word-break:normal}
+.ko{display:none; color:var(--muted); font-size:.9rem; margin-top:2px}
+body.ko-on .ko{display:block}
+.wrap{max-width:1080px; margin-inline:auto}
+
+/* ---------- case bar ---------- */
+.bar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--bg); border-bottom:2px solid var(--ink)}
+.bar-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding-block:10px 8px; max-width:1080px; margin-inline:auto}
+.case{font:700 12px var(--f-mono); letter-spacing:.1em; background:var(--tag); color:var(--tag-ink); border:0; padding:4px 10px; border-radius:2px 8px 8px 2px; cursor:default}
+.bar-title{font-family:var(--f-display); font-size:1.15rem; flex:1 1 180px}
+.bar-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.lockcount{font:700 .85rem var(--f-mono); letter-spacing:.04em}
+.chip{border:1.5px solid var(--ink); background:transparent; border-radius:999px; padding:4px 13px; font-size:.85rem; font-weight:500; cursor:pointer}
+.chip[aria-pressed="true"],.chip[aria-checked="true"]{background:var(--ink); color:var(--bg)}
+.timer{display:flex; align-items:baseline; gap:8px; position:relative}
+.t-label{font-size:.75rem; color:var(--muted)}
+.t-val{font:700 1.7rem/1 var(--f-mono); font-variant-numeric:tabular-nums}
+.pen{position:absolute; right:0; top:-8px; font:700 .9rem var(--f-mono); color:var(--alert); opacity:0; pointer-events:none}
+.pen.show{animation:pen 1.3s ease-out}
+@keyframes pen{0%{opacity:1; transform:translateY(0)}100%{opacity:0; transform:translateY(-16px)}}
+.steps{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; max-width:1080px; margin-inline:auto; padding-bottom:8px}
+.steps li{display:flex; gap:6px; align-items:baseline; font-size:.82rem; color:var(--muted); border-top:3px solid var(--line); padding-top:4px}
+.steps .n{font:700 .75rem var(--f-mono)}
+.steps li.now{color:var(--ink); border-color:var(--ink); font-weight:700}
+.steps li.done{color:var(--ok); border-color:var(--ok)}
+.tbar{height:5px; background:var(--sunk); max-width:1080px; margin-inline:auto}
+.tbar i{display:block; height:100%; width:100%; background:var(--ink); transition:width .25s linear}
+.bar.low .tbar i{background:var(--alert)}
+.bar.low .t-val{color:var(--alert)}
+
+/* ---------- layout ---------- */
+.layout{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:28px; padding-top:26px; align-items:start}
+.layout.solo{grid-template-columns:minmax(0,1fr)}
+.layout.solo .notebook{display:none}
+.stage{min-width:0}
+.screen{display:flex; flex-direction:column; gap:18px}
+.eyebrow{font:700 .78rem var(--f-mono); letter-spacing:.12em; color:var(--muted); text-transform:uppercase}
+h1{font-family:var(--f-display); font-weight:400; font-size:clamp(2rem,5.2vw,3.3rem); line-height:1.15; text-wrap:balance}
+h2{font-family:var(--f-display); font-weight:400; font-size:clamp(1.5rem,3.4vw,2.1rem); line-height:1.2; text-wrap:balance}
+h3{font-size:1rem}
+.room-tag{display:inline-block; align-self:flex-start; background:var(--ink); color:var(--bg); font:700 .78rem var(--f-mono); letter-spacing:.1em; padding:3px 10px}
+.lead{font-size:1.05rem; max-width:62ch}
+
+.btn{background:var(--ink); color:var(--bg); border:2px solid var(--ink); border-radius:6px; padding:11px 22px; font-weight:700; cursor:pointer}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn.ghost{background:transparent; color:var(--ink)}
+.actions{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.msg{min-height:1.6em; font-weight:500}
+.msg.bad{color:var(--alert); animation:shake .35s}
+.msg.good{color:var(--ok)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.tag{display:inline-block; background:var(--tag); color:var(--tag-ink); font:700 .72rem var(--f-mono); letter-spacing:.1em; padding:2px 9px; border-radius:2px 8px 8px 2px}
+
+/* ---------- lock boxes ---------- */
+.lockbox{display:flex; flex-direction:column; gap:14px; border:2px solid var(--ink); background:var(--surface); padding:18px 20px; max-width:800px; min-width:0}
+.lockbox.open{border-color:var(--ok)}
+.lb-head{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px}
+.lb-head h3{font-family:var(--f-display); font-weight:400; font-size:1.2rem}
+.lb-open{display:none; margin-left:auto; font:700 .75rem var(--f-mono); letter-spacing:.1em; color:var(--ok); border:2px solid var(--ok); padding:0 8px}
+.lockbox.open .lb-open{display:inline-block}
+
+/* ---------- intro ---------- */
+.intro-grid{display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:36px; align-items:center}
+.rules{display:flex; flex-direction:column; gap:6px; border-left:3px solid var(--ink); padding-left:14px}
+.setup{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center}
+.setup-label{font-weight:700}
+.chips{display:flex; gap:8px}
+.phone{background:var(--surface); border:2px solid var(--ink); box-shadow:7px 7px 0 var(--ink); max-width:360px; width:100%; margin-inline:auto}
+.p-head{display:flex; gap:10px; align-items:center; padding:10px 12px}
+.av{width:34px; height:34px; border-radius:50%; background:var(--sunk); border:2px solid var(--ink); flex:none}
+.p-head b{display:block; font-size:.9rem; line-height:1.2}
+.p-head small{color:var(--muted)}
+.phone svg{display:block; width:100%; height:auto}
+.p-body{padding:10px 12px 14px; display:flex; flex-direction:column; gap:4px}
+.likes{font-weight:700; font-size:.9rem}
+.cap{font-size:.92rem; line-height:1.45}
+.figcap{margin-top:12px; text-align:center}
+
+/* ---------- photo + hotspots ---------- */
+.photo{border:2px solid var(--ink); box-shadow:6px 6px 0 var(--ink); background:#000; max-width:760px}
+.photo svg{display:block; width:100%; height:auto; touch-action:manipulation}
+.hot{cursor:pointer; outline:none}
+.hot .ring{fill:transparent; stroke:transparent; stroke-width:4; stroke-dasharray:9 6; pointer-events:all}
+.hot:focus-visible .ring{stroke:#fff}
+.hot.found .ring{stroke:var(--tag); stroke-dasharray:none; stroke-width:5}
+.hot.pulse .ring{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{stroke:rgba(255,255,255,.95)}50%{stroke:rgba(255,255,255,0)}}
+.ping{fill:none; stroke:#fff; stroke-width:3; animation:ping .6s ease-out forwards; pointer-events:none}
+@keyframes ping{from{r:4; opacity:1}to{r:30; opacity:0}}
+.count{font:700 .9rem var(--f-mono)}
+.slots{display:flex; flex-direction:column; gap:8px}
+.slot{display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border:1.5px dashed var(--line); background:transparent}
+.slot.on{border:1.5px solid var(--ink); background:var(--bg)}
+.slot .mk{flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font:700 .85rem var(--f-mono); border:1.5px solid var(--line); color:var(--muted)}
+.slot.on .mk{background:var(--tag); color:var(--tag-ink); border-color:var(--tag)}
+
+/* ---------- dials ---------- */
+.dial{display:flex; gap:10px}
+.dial .col{display:flex; flex-direction:column; align-items:center; gap:4px}
+.wh{width:56px; height:34px; border:2px solid var(--ink); background:var(--bg); border-radius:4px; cursor:pointer; font-size:.95rem; line-height:1}
+.wh:active:not(:disabled){background:var(--sunk)}
+.wh:disabled{opacity:.35; cursor:not-allowed}
+.dg{width:56px; height:66px; display:grid; place-items:center; font:700 2rem var(--f-mono); background:var(--lcd-bg); color:var(--lcd-fg); border-radius:4px; font-variant-numeric:tabular-nums}
+.keycard{display:flex; align-items:center; gap:16px; background:var(--note); color:#2B2109; border:2px solid var(--ink); box-shadow:5px 5px 0 var(--ink); padding:12px 18px; max-width:420px}
+.keycard .big{font:700 3rem/1 var(--f-mono)}
+.keycard p{font-family:var(--f-type)}
+
+/* ---------- fridge / notes ---------- */
+.cal{display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; border:1.5px solid var(--ink); background:var(--bg); padding:10px 14px}
+.cal b{font:700 1.5rem var(--f-mono); letter-spacing:.08em}
+.paper{background:var(--note); color:#2B2109; padding:16px 20px; box-shadow:5px 5px 0 var(--ink); max-width:480px; transform:rotate(-.8deg)}
+.paper .typed{font-size:1.02rem; line-height:1.55}
+.paper .ko{color:#4A3E1A}
+.grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+.case-card{position:relative; display:flex; flex-direction:column; gap:6px; text-align:left; background:var(--bg); border:2px solid var(--ink); padding:16px 16px 14px; cursor:pointer; box-shadow:4px 4px 0 var(--ink); min-width:0}
+.case-card::before{content:""; position:absolute; top:-9px; left:20px; width:54px; height:16px; background:var(--tag); opacity:.85; transform:rotate(-3deg)}
+.cc-top{display:flex; justify-content:space-between; gap:8px; align-items:baseline}
+.cc-name{font-family:var(--f-display); font-size:1.25rem}
+.cc-time{font:700 .72rem var(--f-mono); color:var(--muted)}
+.cc-text{font-size:.98rem; line-height:1.5}
+.case-card .ko{font-family:var(--f-body)}
+.cc-flag{position:absolute; right:10px; bottom:10px; font:700 .8rem var(--f-mono); letter-spacing:.08em; color:var(--alert); border:2px solid var(--alert); padding:1px 8px; transform:rotate(-8deg); opacity:0}
+.case-card[aria-pressed="true"]{border-color:var(--alert); box-shadow:4px 4px 0 var(--alert)}
+.case-card[aria-pressed="true"] .cc-flag{opacity:1}
+.case-card:disabled{cursor:default}
+
+/* ---------- comments (acrostic) ---------- */
+.tablet{border:2px solid var(--ink); background:var(--bg); padding:14px; display:flex; flex-direction:column; gap:10px; max-width:560px; border-radius:14px}
+.tab-head{display:flex; justify-content:space-between; align-items:baseline}
+.tab-head b{font-size:.9rem}
+.cmt{display:flex; flex-direction:column; gap:1px; padding:8px 12px; background:var(--surface); border:1.5px solid var(--line)}
+.cmt small{font:700 .72rem var(--f-mono); color:var(--muted)}
+.cmt .typed{font-size:.98rem}
+.pw{width:100%; max-width:480px; padding:10px 14px; border:2px solid var(--ink); border-radius:4px; background:var(--bg); font:700 1.2rem var(--f-mono); letter-spacing:.08em; text-transform:uppercase}
+.pw:disabled{opacity:.5}
+
+/* ---------- cipher ---------- */
+.note{background:var(--note); color:#2B2109; padding:22px 26px; transform:rotate(-1.2deg); box-shadow:6px 6px 0 var(--ink); max-width:480px}
+.note .code{font-family:var(--f-type); font-size:clamp(1.35rem,5vw,2rem); line-height:1.55; letter-spacing:.12em; word-break:normal}
+.note .sign{font-family:var(--f-type); text-align:right; margin-top:6px}
+.shifter{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.shifter .val{font:700 1.6rem var(--f-mono); min-width:2.4ch; text-align:center}
+.step{width:44px; height:44px; border:2px solid var(--ink); background:var(--bg); border-radius:4px; font:700 1.3rem var(--f-mono); cursor:pointer}
+.key{display:flex; flex-direction:column; gap:8px}
+.keyrow{display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); border:1.5px solid var(--ink); background:var(--bg)}
+.keyrow div{display:grid; text-align:center; font-family:var(--f-mono); border-left:1px solid var(--line)}
+.keyrow div:first-child{border-left:0}
+.keyrow span{color:var(--muted); font-size:.78rem; border-bottom:1px solid var(--line); padding:2px 0}
+.keyrow b{font-size:.95rem; padding:2px 0}
+.door-note{background:var(--note); color:#2B2109; padding:16px 20px; border:2px solid var(--ink); max-width:520px}
+.door-note ol{display:flex; flex-direction:column; gap:2px; margin-top:6px; font-family:var(--f-type)}
+.door-note li::before{content:attr(data-n) ". "}
+.mini-post{border:2px solid var(--ink); background:var(--bg); padding:10px 14px; max-width:520px; display:flex; flex-direction:column; gap:2px}
+.mini-post small{color:var(--muted); font-family:var(--f-mono)}
+
+/* ---------- mirror, order, morse ---------- */
+.mirror{display:block; transform:scaleX(-1); font-size:1.15rem}
+.mirror.fixed{transform:none}
+.ord{display:flex; flex-direction:column; gap:8px}
+.oc{display:flex; gap:12px; align-items:center; justify-content:space-between; border:2px solid var(--ink); background:var(--bg); padding:10px 12px; box-shadow:3px 3px 0 var(--ink)}
+.oc-t{display:flex; flex-direction:column; min-width:0}
+.oc-t .typed{font-size:.98rem; line-height:1.45}
+.oc-b{display:flex; flex-direction:column; gap:4px; flex:none}
+.mv{width:40px; height:28px; border:2px solid var(--ink); background:var(--surface); border-radius:4px; cursor:pointer; line-height:1; font-size:.8rem}
+.mv:disabled{opacity:.3; cursor:not-allowed}
+.blink{display:flex; flex-wrap:wrap; gap:18px 30px; background:var(--lcd-bg); color:var(--lcd-fg); padding:20px 22px; border-radius:6px}
+.grp{display:inline-flex; gap:8px; align-items:center}
+.dot,.dash{display:inline-block; background:currentColor}
+.dot{width:10px; height:10px; border-radius:50%}
+.dash{width:26px; height:10px; border-radius:5px}
+.blink .dot{width:18px; height:18px; filter:drop-shadow(0 0 6px currentColor)}
+.blink .dash{width:48px; height:18px; border-radius:9px; filter:drop-shadow(0 0 6px currentColor)}
+.morse-chart{display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px}
+.mc{display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--bg); padding:4px 8px}
+.mc b{font:700 1rem var(--f-mono); width:1.3ch}
+.mc span{display:inline-flex; gap:3px; align-items:center}
+.mc .dot{width:7px; height:7px}
+.mc .dash{width:18px; height:7px; border-radius:4px}
+
+/* ---------- suspects ---------- */
+.sus{display:flex; flex-direction:column; gap:10px; text-align:left; background:var(--bg); border:2px solid var(--ink); padding:14px 16px; cursor:pointer; box-shadow:4px 4px 0 var(--ink); min-width:0}
+.sus .top{display:flex; align-items:center; gap:12px}
+.sus .ini{width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:var(--sunk); display:grid; place-items:center; font-family:var(--f-display); font-size:1.2rem; flex:none}
+.sus .nm{font-family:var(--f-display); font-size:1.2rem}
+.sus dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:.9rem; align-items:center}
+.sus dt{color:var(--muted)}
+.sus dd{margin:0; display:flex; align-items:center; gap:8px}
+.sw{width:18px; height:18px; border:1.5px solid var(--ink); flex:none}
+.sus[aria-pressed="true"]{border-color:var(--alert); box-shadow:4px 4px 0 var(--alert); background:var(--sunk)}
+
+/* ---------- hints ---------- */
+.hintbox{display:flex; flex-direction:column; gap:8px; align-items:flex-start}
+.hintbox .btn{padding:6px 14px; font-size:.88rem}
+.hint-list{display:flex; flex-direction:column; gap:6px; align-self:stretch}
+.hint-list li{border-left:3px solid var(--tag); padding:4px 10px; background:var(--bg); font-size:.95rem}
+
+/* ---------- notebook ---------- */
+.notebook{background:var(--surface); border:2px solid var(--ink); padding:16px; display:flex; flex-direction:column; gap:12px}
+.nb-h{font-family:var(--f-display); font-size:1.25rem}
+.nb-list{display:flex; flex-direction:column; gap:10px}
+.nb{display:flex; flex-direction:column; gap:4px; padding:10px 12px; border:1.5px solid var(--ink); background:var(--bg)}
+.nb h3{font-size:.95rem}
+.nb.locked{border-style:dashed; border-color:var(--line); background:transparent}
+.nb.locked h3{color:var(--muted)}
+.nb .en{font-size:.95rem; line-height:1.45}
+@media (min-width:861px){
+  .notebook{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 150px); max-height:calc(100vh - 180px); overflow:auto}
+}
+
+/* ---------- end ---------- */
+.stamp{align-self:flex-start; font-family:var(--f-display); font-size:clamp(1.6rem,5vw,2.4rem); color:var(--alert); border:4px solid var(--alert); padding:2px 16px; transform:rotate(-4deg); letter-spacing:.06em}
+.stats{display:flex; flex-wrap:wrap; gap:10px 28px; margin:0}
+.stats div{display:flex; flex-direction:column}
+.stats dt{font-size:.78rem; color:var(--muted)}
+.stats dd{margin:0; font:700 1.5rem var(--f-mono); font-variant-numeric:tabular-nums}
+.rule{background:var(--note); color:#2B2109; border:2px solid var(--ink); box-shadow:6px 6px 0 var(--ink); padding:20px 24px; max-width:640px; display:flex; flex-direction:column; gap:12px}
+.rule .big{font-family:var(--f-type); font-size:clamp(1.5rem,5vw,2.2rem); line-height:1.2}
+.rule li{padding-left:14px; border-left:3px solid #2B2109}
+.rule li p{font-family:var(--f-type)}
+.rule li span{display:block; font-size:.92rem}
+
+/* ---------- teacher + modal ---------- */
+.teacher{position:fixed; right:max(12px, env(safe-area-inset-right, 0px)); bottom:max(12px, env(safe-area-inset-bottom, 0px)); z-index:40; width:min(360px, calc(100vw - 24px)); background:var(--surface); border:2px solid var(--alert); padding:14px; display:flex; flex-direction:column; gap:8px; font-size:.88rem; max-height:70vh; overflow:auto}
+.teacher h2{font-family:var(--f-body); font-weight:700; font-size:1rem}
+.teacher ul{display:flex; flex-direction:column; gap:3px}
+.teacher .actions .btn{padding:6px 12px; font-size:.85rem}
+.modal{position:fixed; inset:0; z-index:50; background:rgba(8,14,12,.72); display:grid; place-items:center; padding:20px}
+.modal-in{background:var(--surface); border:2px solid var(--alert); padding:26px; max-width:440px; display:flex; flex-direction:column; gap:14px}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .intro-grid{grid-template-columns:minmax(0,1fr); gap:28px}
+}
+@media (max-width:520px){
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .steps li{font-size:.75rem; flex-direction:column; gap:0}
+  .t-label{display:none}
+  .lockbox{padding:16px 14px}
+  .wh,.dg{width:50px}
+  .dial[data-len="6"]{gap:6px}
+  .dial[data-len="6"] .wh,.dial[data-len="6"] .dg{width:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important; transition:none!important}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <clipPath id="mirrorClip"><ellipse cx="625" cy="175" rx="52" ry="92"/></clipPath>
+    <symbol id="bearroom" viewBox="0 0 800 480">
+      <rect width="800" height="480" fill="#B58557"/>
+      <path d="M0 60H800M0 120H800M0 180H800M0 240H800M0 300H800" stroke="#9C6F45" stroke-width="2" opacity=".6"/>
+      <rect y="345" width="800" height="135" fill="#6B452D"/>
+      <path d="M0 345H800" stroke="#4E3120" stroke-width="6"/>
+      <path d="M0 395H800M0 440H800M180 345L150 480M420 345V480M660 345L700 480" stroke="#58381F" stroke-width="2" opacity=".7"/>
+      <!-- window with 4 pines -->
+      <rect x="36" y="66" width="168" height="168" rx="4" fill="#F2E8D6"/>
+      <rect x="46" y="76" width="148" height="148" fill="#9ED2E6"/>
+      <path d="M48 202L66 126L84 202Z" fill="#2E6B4F"/>
+      <path d="M80 202L98 108L116 202Z" fill="#2A6148"/>
+      <path d="M112 202L130 120L148 202Z" fill="#2E6B4F"/>
+      <path d="M144 202L162 134L180 202Z" fill="#2A6148"/>
+      <rect x="46" y="200" width="148" height="24" fill="#4F8A4D"/>
+      <path d="M120 76V224M46 150H194" stroke="#F2E8D6" stroke-width="8"/>
+      <!-- key board -->
+      <rect x="226" y="146" width="70" height="64" rx="6" fill="#8A5A37" stroke="#5B3A22" stroke-width="3"/>
+      <circle cx="262" cy="162" r="5" fill="#D9B45A"/>
+      <circle cx="262" cy="178" r="8" fill="none" stroke="#E7C66A" stroke-width="4"/>
+      <path d="M262 186V202M262 194H270M262 200H268" stroke="#E7C66A" stroke-width="4" stroke-linecap="round"/>
+      <!-- door -->
+      <rect x="312" y="78" width="124" height="267" rx="4" fill="#7A4D31" stroke="#4E3120" stroke-width="4"/>
+      <rect x="330" y="98" width="88" height="100" fill="none" stroke="#5E3B25" stroke-width="3"/>
+      <rect x="330" y="214" width="88" height="110" fill="none" stroke="#5E3B25" stroke-width="3"/>
+      <circle cx="414" cy="232" r="7" fill="#D9B45A"/>
+      <!-- address plate -->
+      <rect x="452" y="138" width="92" height="50" rx="5" fill="#E7C66A" stroke="#9A7A2E" stroke-width="3"/>
+      <text x="498" y="161" text-anchor="middle" font-family="Special Elite, Courier New, monospace" font-size="18" fill="#3A2A0A">No. 9</text>
+      <text x="498" y="178" text-anchor="middle" font-family="Special Elite, Courier New, monospace" font-size="11" fill="#3A2A0A">PINE ROAD</text>
+      <!-- mirror -->
+      <ellipse cx="625" cy="175" rx="62" ry="102" fill="#F4EBDD"/>
+      <ellipse cx="625" cy="175" rx="52" ry="92" fill="#CFE3E8"/>
+      <g clip-path="url(#mirrorClip)">
+        <rect x="560" y="80" width="130" height="190" fill="#DCEBEF"/>
+        <rect x="560" y="222" width="130" height="50" fill="#B8CFD6"/>
+        <path d="M594 272Q597 208 625 202Q653 208 656 272Z" fill="#6E8BC0"/>
+        <ellipse cx="625" cy="152" rx="31" ry="38" fill="#F2C94C"/>
+        <path d="M595 152Q591 206 606 216L614 172Z" fill="#F2C94C"/>
+        <path d="M655 152Q659 206 644 216L636 172Z" fill="#F2C94C"/>
+        <circle cx="625" cy="154" r="19" fill="#F1C9A5"/>
+        <path d="M605 148Q625 122 645 148Q625 138 605 148Z" fill="#F2C94C"/>
+        <circle cx="618" cy="156" r="2" fill="#3A2A1A"/>
+        <circle cx="632" cy="156" r="2" fill="#3A2A1A"/>
+        <path d="M652 222L646 170" stroke="#6E8BC0" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="645" cy="166" r="6" fill="#F1C9A5"/>
+        <rect x="634" y="122" width="22" height="42" rx="4" fill="#EE82B4" stroke="#B55A86" stroke-width="2"/>
+        <circle cx="641" cy="130" r="3" fill="#3A2A3A"/>
+      </g>
+      <!-- 3 chairs -->
+      <g fill="#8A5A37" stroke="#4E3120" stroke-width="2">
+        <rect x="44" y="268" width="14" height="92"/><rect x="44" y="340" width="82" height="14"/><rect x="48" y="354" width="9" height="66"/><rect x="112" y="354" width="9" height="66"/>
+        <rect x="108" y="296" width="12" height="74"/><rect x="108" y="358" width="64" height="12"/><rect x="111" y="370" width="8" height="52"/><rect x="160" y="370" width="8" height="52"/>
+        <rect x="176" y="324" width="10" height="56"/><rect x="176" y="372" width="46" height="10"/><rect x="179" y="382" width="6" height="40"/><rect x="214" y="382" width="6" height="40"/>
+      </g>
+      <!-- table + 3 bowls -->
+      <rect x="250" y="394" width="400" height="20" fill="#A0703F" stroke="#4E3120" stroke-width="3"/>
+      <rect x="268" y="414" width="14" height="60" fill="#8A5A37" stroke="#4E3120" stroke-width="2"/>
+      <rect x="618" y="414" width="14" height="60" fill="#8A5A37" stroke="#4E3120" stroke-width="2"/>
+      <path d="M284 378Q284 394 320 394Q356 394 356 378Z" fill="#F4EBDD"/>
+      <ellipse cx="320" cy="378" rx="36" ry="8" fill="#E8C98F" stroke="#F4EBDD" stroke-width="3"/>
+      <path d="M382 380Q382 394 410 394Q438 394 438 380Z" fill="#F4EBDD"/>
+      <ellipse cx="410" cy="380" rx="28" ry="7" fill="#E8C98F" stroke="#F4EBDD" stroke-width="3"/>
+      <path d="M465 382Q465 394 485 394Q505 394 505 382Z" fill="#F4EBDD"/>
+      <ellipse cx="485" cy="382" rx="20" ry="6" fill="#E8C98F" stroke="#F4EBDD" stroke-width="3"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="bar" id="bar">
+  <div class="bar-row">
+    <button type="button" class="case" id="caseTap" aria-label="사건 번호">CASE No.08</button>
+    <p class="bar-title">곰네 집 무단 게시 사건</p>
+    <div class="bar-right">
+      <span class="lockcount" id="lockCount">자물쇠 0/11</span>
+      <button type="button" class="chip" id="koBtn" aria-pressed="false">한글 뜻 보기</button>
+      <div class="timer" id="timer">
+        <span class="t-label">남은 시간</span>
+        <span class="t-val" id="tVal">10:00</span>
+        <span class="pen" id="pen" aria-hidden="true"></span>
+      </div>
+    </div>
+  </div>
+  <ol class="steps" id="steps" aria-label="진행 단계">
+    <li data-s="r1"><span class="n">1</span>거실</li>
+    <li data-s="r2"><span class="n">2</span>부엌</li>
+    <li data-s="r3"><span class="n">3</span>침실</li>
+    <li data-s="r4"><span class="n">4</span>현관</li>
+  </ol>
+  <div class="tbar"><i id="tFill"></i></div>
+</header>
+
+<main class="wrap">
+  <div class="layout solo" id="layout">
+    <div class="stage">
+
+      <!-- INTRO -->
+      <section class="screen" id="s-intro">
+        <div class="intro-grid">
+          <div class="screen">
+            <p class="eyebrow">English · Lesson 8 도입 활동</p>
+            <h1>누가 곰네 집 사진을 SNS에 올렸을까?</h1>
+            <p class="lead">산책에서 돌아온 곰 가족은 깜짝 놀랐어요. 집 안 사진이 SNS에 올라와 있었거든요! 화가 난 곰 가족은 현관문을 잠그고 말했어요. “범인을 찾기 전에는 아무도 못 나가!”</p>
+            <ul class="rules">
+              <li>방 4개, 자물쇠 11개를 차례로 풀어요. 숫자, 거울글씨, 모스 부호, 순서 맞추기, 암호가 섞여 있어요.</li>
+              <li>한 방에서 찾은 물건과 숫자는 다음 방에서 다시 쓰여요. 증거 노트를 잘 보세요.</li>
+              <li>힌트는 20초, 틀린 답은 10초, 범인을 잘못 지목하면 30초가 줄어요.</li>
+            </ul>
+            <div class="setup">
+              <span class="setup-label">제한 시간 10분</span>
+            </div>
+            <div class="actions"><button type="button" class="btn" id="btnStart">수사 시작</button></div>
+          </div>
+          <figure class="figure">
+            <div class="phone">
+              <div class="p-head"><span class="av"></span><div><b>user_4821</b><small>Forest Town · 3:15 PM</small></div></div>
+              <svg viewBox="0 0 800 480" role="img" aria-label="SNS에 올라온 곰네 집 거실 사진"><use href="#bearroom" width="800" height="480"/></svg>
+              <div class="p-body">
+                <p class="likes">♥ 1,284 likes</p>
+                <p class="cap typed"><b>user_4821</b> Look at this cozy house! #BearsHouse #NoOneHome #HotPlace</p>
+              </div>
+            </div>
+            <figcaption class="figcap sub">곰 가족이 발견한 문제의 게시물</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ROOM 1 -->
+      <section class="screen" id="s-r1" hidden>
+        <span class="room-tag">ROOM 1 · 거실</span>
+        <h2>사진 속 비밀을 풀어라</h2>
+
+        <div class="lockbox" data-l="hunt">
+          <div class="lb-head"><span class="tag">LOCK 1</span><h3>위험한 정보 3개 찾기</h3><span class="lb-open">OPEN</span></div>
+          <div>
+            <p class="en">Find 3 things in the photo that should NOT be online.</p>
+            <p class="ko">사진 속에서 인터넷에 올리면 안 되는 것 3가지를 찾으세요.</p>
+            <p class="sub">사진을 눌러 살펴보세요. 엉뚱한 곳을 누르면 물결이 퍼져요.</p>
+          </div>
+          <figure class="photo">
+            <svg id="r1svg" viewBox="0 0 800 480" role="group" aria-label="곰네 집 거실 사진. 누를 수 있는 곳이 3군데 있어요.">
+              <use href="#bearroom" width="800" height="480"/>
+              <g class="hot" data-k="addr" tabindex="0" role="button" aria-label="사진의 한 부분 A"><rect class="ring" x="444" y="130" width="108" height="66" rx="8"/></g>
+              <g class="hot" data-k="key" tabindex="0" role="button" aria-label="사진의 한 부분 B"><rect class="ring" x="218" y="138" width="86" height="80" rx="8"/></g>
+              <g class="hot" data-k="mirror" tabindex="0" role="button" aria-label="사진의 한 부분 C"><ellipse class="ring" cx="625" cy="175" rx="70" ry="110"/></g>
+            </svg>
+          </figure>
+          <p class="count" id="r1Count" aria-live="polite">0 / 3 발견</p>
+          <ol class="slots" id="slots"></ol>
+          <div class="hintbox" data-r="hunt"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="safe" data-need="hunt" hidden>
+          <div class="lb-head"><span class="tag">LOCK 2</span><h3>곰네 금고</h3><span class="lb-open">OPEN</span></div>
+          <div>
+            <p class="en">Safe code: house number, pine trees in the window, chairs.</p>
+            <p class="ko">금고 번호: 집 번호, 창밖 소나무 수, 의자 수 (순서대로)</p>
+            <p class="sub">위 사진을 다시 자세히 보세요.</p>
+          </div>
+          <div class="dial" data-d="safe" data-len="3"></div>
+          <div class="actions"><button type="button" class="btn" id="checkSafe">금고 열기</button></div>
+          <p class="msg" id="msgSafe" aria-live="polite"></p>
+          <div class="keycard" id="keycard" hidden>
+            <span class="big">5</span>
+            <div><span class="tag">KEY CARD</span><p>Keep this card. You need it later.</p><p class="ko">이 카드를 잘 챙기세요. 나중에 필요해요.</p></div>
+          </div>
+          <div class="hintbox" data-r="safe"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="mirror" data-need="safe" hidden>
+          <div class="lb-head"><span class="tag">LOCK 3</span><h3>거울글씨 편지</h3><span class="lb-open">OPEN</span></div>
+          <p class="lead">열쇠 카드 뒷면에 글씨가 있는데 이상하게 뒤집혀 있어요. 거울에 비춘 것처럼요!</p>
+          <div class="paper">
+            <p class="typed mirror" id="mirrorTxt">Mama Bear's password is HONEY.</p>
+          </div>
+          <div>
+            <p class="en">What is Mama Bear's password?</p>
+            <p class="ko">엄마곰의 비밀번호는 무엇인가요?</p>
+          </div>
+          <label class="sub" for="mir">비밀번호 (영어 단어 1개)</label>
+          <input id="mir" class="pw" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="_ _ _ _ _">
+          <div class="actions"><button type="button" class="btn" id="checkMir">입력</button></div>
+          <p class="msg" id="msgMir" aria-live="polite"></p>
+          <div class="hintbox" data-r="mirror"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="actions"><button type="button" class="btn" id="next1" disabled>다음 방으로: 부엌</button></div>
+      </section>
+
+      <!-- ROOM 2 -->
+      <section class="screen" id="s-r2" hidden>
+        <span class="room-tag">ROOM 2 · 부엌</span>
+        <h2>냉장고 속 단서를 풀어라</h2>
+
+        <div class="lockbox" data-l="alibi">
+          <div class="lb-head"><span class="tag">LOCK 4</span><h3>알리바이 심사</h3><span class="lb-open">OPEN</span></div>
+          <p class="lead">냉장고에 용의자 4명의 진술서가 붙어 있어요. 게시물은 <b>3:15 PM</b>에 올라왔어요.</p>
+          <div class="cal">
+            <span class="tag">FRIDGE CALENDAR</span>
+            <b>SAT</b>
+            <span class="typed">School days: Mon – Fri</span>
+          </div>
+          <div>
+            <p class="en">Whose alibi is NOT good? Pick 2 people.</p>
+            <p class="ko">알리바이가 좋지 않은 사람 2명을 고르세요.</p>
+            <p class="sub">알리바이 = 그 시각에 다른 곳에 있었다는 증거</p>
+          </div>
+          <div class="grid2" id="fridge">
+            <button type="button" class="case-card" data-k="gretel" aria-pressed="false">
+              <span class="cc-top"><span class="cc-name">Gretel</span><span class="cc-time">3:15 PM</span></span>
+              <span class="typed cc-text">I was at the bakery with my brother. The shop took a photo of us at 3:15.</span>
+              <span class="ko">나는 오빠와 빵집에 있었어요. 가게가 3시 15분에 우리 사진을 찍었어요.</span>
+              <span class="cc-flag" aria-hidden="true">NOT GOOD</span>
+            </button>
+            <button type="button" class="case-card" data-k="red" aria-pressed="false">
+              <span class="cc-top"><span class="cc-name">Little Red</span><span class="cc-time">3:15 PM</span></span>
+              <span class="typed cc-text">I was at Grandma's house. We ate cake together. Grandma can say, "Yes, she was here."</span>
+              <span class="ko">나는 할머니 집에 있었어요. 같이 케이크를 먹었어요. 할머니가 “응, 여기 있었어”라고 말해 줄 수 있어요.</span>
+              <span class="cc-flag" aria-hidden="true">NOT GOOD</span>
+            </button>
+            <button type="button" class="case-card" data-k="goldi" aria-pressed="false">
+              <span class="cc-top"><span class="cc-name">Goldilocks</span><span class="cc-time">3:15 PM</span></span>
+              <span class="typed cc-text">I was in the forest. I was picking flowers. I was alone.</span>
+              <span class="ko">나는 숲에 있었어요. 꽃을 꺾고 있었어요. 나는 혼자였어요.</span>
+              <span class="cc-flag" aria-hidden="true">NOT GOOD</span>
+            </button>
+            <button type="button" class="case-card" data-k="jack" aria-pressed="false">
+              <span class="cc-top"><span class="cc-name">Jack</span><span class="cc-time">3:15 PM</span></span>
+              <span class="typed cc-text">I was at school. I was in math class.</span>
+              <span class="ko">나는 학교에 있었어요. 수학 수업 중이었어요.</span>
+              <span class="cc-flag" aria-hidden="true">NOT GOOD</span>
+            </button>
+          </div>
+          <div class="actions"><button type="button" class="btn" id="checkAlibi" disabled>이 2명이 의심스러워요</button></div>
+          <p class="msg" id="msgAlibi" aria-live="polite"></p>
+          <div class="hintbox" data-r="alibi"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="fridge" data-need="alibi" hidden>
+          <div class="lb-head"><span class="tag">LOCK 5</span><h3>냉장고 자물쇠</h3><span class="lb-open">OPEN</span></div>
+          <div class="paper">
+            <p class="typed">We left home at 2:40 PM. Back soon! - Mama Bear</p>
+            <p class="ko">우리는 오후 2시 40분에 집을 나갔어요. 곧 올게요! - 엄마곰</p>
+          </div>
+          <div>
+            <p class="en">How many minutes was the house empty before the post (3:15 PM)?</p>
+            <p class="ko">게시물이 올라오기(3:15 PM) 전까지 집은 몇 분 동안 비어 있었나요?</p>
+            <p class="sub">냉장고 안에는 아기곰의 태블릿이 들어 있어요.</p>
+          </div>
+          <div class="dial" data-d="fridge" data-len="2"></div>
+          <div class="actions"><button type="button" class="btn" id="checkFridge">냉장고 열기</button></div>
+          <p class="msg" id="msgFridge" aria-live="polite"></p>
+          <div class="hintbox" data-r="fridge"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="order" data-need="fridge" hidden>
+          <div class="lb-head"><span class="tag">LOCK 6</span><h3>사건 순서 맞추기</h3><span class="lb-open">OPEN</span></div>
+          <div>
+            <p class="en">Put the story in the right order. Use the arrows.</p>
+            <p class="ko">사건이 일어난 순서대로 문장을 놓으세요. 화살표 버튼을 사용해요.</p>
+          </div>
+          <ol class="ord" id="ordList"></ol>
+          <div class="actions"><button type="button" class="btn" id="checkOrder">순서 확인</button></div>
+          <p class="msg" id="msgOrder" aria-live="polite"></p>
+          <div class="hintbox" data-r="order"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="actions"><button type="button" class="btn" id="next2" disabled>다음 방으로: 침실</button></div>
+      </section>
+
+      <!-- ROOM 3 -->
+      <section class="screen" id="s-r3" hidden>
+        <span class="room-tag">ROOM 3 · 침실</span>
+        <h2>아기곰의 태블릿을 열어라</h2>
+
+        <div class="lockbox" data-l="acro">
+          <div class="lb-head"><span class="tag">LOCK 7</span><h3>태블릿 비밀번호</h3><span class="lb-open">OPEN</span></div>
+          <p class="lead">태블릿에 게시물 댓글이 떠 있어요. 비밀번호 힌트는 “Read down.”이에요.</p>
+          <div class="tablet">
+            <div class="tab-head"><b>Comments (7)</b><span class="sub">user_4821's post</span></div>
+            <div class="cmt"><small>@sunny_day</small><span class="typed">Pretty house! I want to visit.</span><span class="ko">예쁜 집이다! 가 보고 싶어.</span></div>
+            <div class="cmt"><small>@mina_22</small><span class="typed">Really cozy. Where is it?</span><span class="ko">정말 아늑하다. 어디야?</span></div>
+            <div class="cmt"><small>@jj_forest</small><span class="typed">I love the little chair.</span><span class="ko">작은 의자가 마음에 들어.</span></div>
+            <div class="cmt"><small>@pinecone</small><span class="typed">Very nice kitchen too.</span><span class="ko">부엌도 아주 멋져.</span></div>
+            <div class="cmt"><small>@wolf_fan</small><span class="typed">Anyone home right now? Haha.</span><span class="ko">지금 집에 아무도 없어? 하하.</span></div>
+            <div class="cmt"><small>@tomtom</small><span class="typed">That key on the wall is funny.</span><span class="ko">벽에 걸린 열쇠 웃기다.</span></div>
+            <div class="cmt"><small>@hello_hi</small><span class="typed">Everyone, come and see!</span><span class="ko">다들 와서 봐!</span></div>
+          </div>
+          <div>
+            <p class="en">Read the first letter of each comment. What is the password?</p>
+            <p class="ko">각 댓글의 첫 글자를 읽어 보세요. 비밀번호는 무엇일까요?</p>
+          </div>
+          <label class="sub" for="acro">태블릿 비밀번호 (영어 단어 1개)</label>
+          <input id="acro" class="pw" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="_ _ _ _ _ _ _">
+          <div class="actions"><button type="button" class="btn" id="checkAcro">잠금 해제</button></div>
+          <p class="msg" id="msgAcro" aria-live="polite"></p>
+          <div class="hintbox" data-r="acro"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="caesar" data-need="acro" hidden>
+          <div class="lb-head"><span class="tag">LOCK 8</span><h3>아기곰의 비밀 쪽지</h3><span class="lb-open">OPEN</span></div>
+          <p class="lead">태블릿이 열리자 메모 앱에 이상한 글자가 있어요!</p>
+          <div class="note">
+            <p class="code">YMNSP GJKTWJ DTZ UTXY</p>
+            <p class="sign">- Baby Bear</p>
+          </div>
+          <div>
+            <p class="en">Move each letter BACK by the number on your KEY CARD.</p>
+            <p class="ko">열쇠 카드에 적힌 숫자만큼 각 글자를 뒤로(앞 글자로) 옮기세요.</p>
+            <p class="sub">아래 해독표의 칸 수를 바꿔서 사용해요. 예: 칸 수가 1이면 암호 B는 진짜 A예요.</p>
+          </div>
+          <div class="shifter">
+            <span class="setup-label">옮길 칸 수</span>
+            <button type="button" class="step" id="shDown" aria-label="칸 수 줄이기">−</button>
+            <span class="val" id="shVal">1</span>
+            <button type="button" class="step" id="shUp" aria-label="칸 수 늘리기">+</button>
+          </div>
+          <div class="key" id="key" aria-label="암호 해독표"></div>
+          <label class="sub" for="cz">해독한 문장 (영어 4단어)</label>
+          <input id="cz" class="pw" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC DEF GHI JKL">
+          <div class="actions"><button type="button" class="btn" id="checkCz">해독 완료</button></div>
+          <p class="msg" id="msgCz" aria-live="polite"></p>
+          <div class="hintbox" data-r="caesar"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="morse" data-need="caesar" hidden>
+          <div class="lb-head"><span class="tag">LOCK 9</span><h3>창밖의 손전등 신호</h3><span class="lb-open">OPEN</span></div>
+          <p class="lead">창밖에서 손전등이 깜빡여요. 짧게 켜면 점(●), 길게 켜면 선(▬)이에요. 글자 사이는 띄어서 보여 줘요.</p>
+          <div class="blink" id="blink" role="img" aria-label="모스 부호 신호: 6글자"></div>
+          <div>
+            <p class="en">What is the flashlight saying to Goldilocks?</p>
+            <p class="ko">손전등은 골디락스에게 뭐라고 말하고 있나요? (영어 단어 1개)</p>
+          </div>
+          <details open>
+            <summary class="sub">모스 부호표 보기</summary>
+            <div class="morse-chart" id="morseChart"></div>
+          </details>
+          <label class="sub" for="mor">해독한 단어</label>
+          <input id="mor" class="pw" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="_ _ _ _ _ _">
+          <div class="actions"><button type="button" class="btn" id="checkMor">해독 완료</button></div>
+          <p class="msg" id="msgMor" aria-live="polite"></p>
+          <div class="hintbox" data-r="morse"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="actions"><button type="button" class="btn" id="next3" disabled>현관으로 나가기</button></div>
+      </section>
+
+      <!-- ROOM 4 -->
+      <section class="screen" id="s-r4" hidden>
+        <span class="room-tag">현관 · 마지막 관문</span>
+        <h2>현관문을 열고 범인을 지목하라</h2>
+
+        <div class="lockbox" data-l="door">
+          <div class="lb-head"><span class="tag">LOCK 10</span><h3>현관문 4자리 번호</h3><span class="lb-open">OPEN</span></div>
+          <div class="door-note">
+            <span class="tag">DOOR CODE</span>
+            <ol class="typed">
+              <li data-n="1">the house number</li>
+              <li data-n="2">the number on the key card</li>
+              <li data-n="3">words in Baby Bear's message</li>
+              <li data-n="4">hashtags in the post</li>
+            </ol>
+            <p class="ko">1. 집 번호 2. 열쇠 카드의 숫자 3. 아기곰 메시지의 단어 수 4. 게시물의 해시태그(#) 수</p>
+          </div>
+          <div class="mini-post">
+            <small>user_4821 · 3:15 PM</small>
+            <p class="typed">Look at this cozy house! #BearsHouse #NoOneHome #HotPlace</p>
+          </div>
+          <div class="dial" data-d="door" data-len="4"></div>
+          <div class="actions"><button type="button" class="btn" id="checkDoor">문 열기</button></div>
+          <p class="msg" id="msgDoor" aria-live="polite"></p>
+          <div class="hintbox" data-r="door"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+
+        <div class="lockbox" data-l="accuse" data-need="door" hidden>
+          <div class="lb-head"><span class="tag">LOCK 11</span><h3>범인 지목</h3><span class="lb-open">OPEN</span></div>
+          <div>
+            <p class="en">Who posted the photos?</p>
+            <p class="ko">누가 사진을 올렸나요?</p>
+            <p class="sub">증거 노트의 거울 속 사람과 알리바이를 함께 보세요. 틀리면 30초가 줄어요!</p>
+          </div>
+          <div class="grid2" id="susGrid"></div>
+          <div class="actions"><button type="button" class="btn" id="check4" disabled>이 사람이 범인!</button></div>
+          <p class="msg" id="msg4" aria-live="polite"></p>
+          <div class="hintbox" data-r="accuse"><button type="button" class="btn ghost hint-btn"></button><ol class="hint-list"></ol></div>
+        </div>
+      </section>
+
+      <!-- END -->
+      <section class="screen" id="s-end" hidden>
+        <span class="stamp">CASE CLOSED</span>
+        <h2 id="endTitle">탈출 성공! 범인은 Goldilocks</h2>
+        <p class="lead" id="endLead"></p>
+        <dl class="stats">
+          <div><dt>걸린 시간</dt><dd id="stTime">00:00</dd></div>
+          <div><dt>힌트</dt><dd id="stHint">0회</dd></div>
+          <div><dt>오답</dt><dd id="stWrong">0회</dd></div>
+        </dl>
+        <div class="rule">
+          <span class="tag" style="align-self:flex-start">BABY BEAR'S RULE</span>
+          <p class="big">Think before you post.</p>
+          <ul>
+            <li><p>Is it mine to share?</p><span>이 사진을 올려도 되는 사람이 나일까요?</span></li>
+            <li><p>Does it show private things?</p><span>주소, 열쇠, 얼굴처럼 개인적인 정보가 보이나요?</span></li>
+            <li><p>How will they feel?</p><span>사진 속 사람은 어떤 기분일까요?</span></li>
+          </ul>
+        </div>
+        <p class="lead">이제 본문에서 곰 가족이 골디락스에게 뭐라고 말했는지 확인해 봐요.</p>
+        <div class="actions"><button type="button" class="btn ghost" id="btnAgain">처음부터 다시</button></div>
+      </section>
+    </div>
+
+    <aside class="notebook" id="notebook" aria-label="증거 노트">
+      <h2 class="nb-h">증거 노트</h2>
+      <ol class="nb-list" id="nbList"></ol>
+      <p class="sub">용의자: Little Red · Jack · Gretel · Goldilocks</p>
+    </aside>
+  </div>
+</main>
+
+<aside class="teacher" id="teacher" hidden aria-label="교사용 패널">
+  <h2>교사용 패널 (학생 화면에는 안 보여요)</h2>
+  <ul>
+    <li><b>1 거실</b> 번호판 · 열쇠 걸이 · 거울 → 금고 <b>943</b> (집 번호 9, 소나무 4, 의자 3) → 열쇠 카드 5 → 거울글씨 <b>HONEY</b></li>
+    <li><b>2 부엌</b> Jack(토요일 학교 X) + Goldilocks(증인 X) → 냉장고 <b>35</b>분 (2:40~3:15) → 순서: 집을 나감 · 문을 염 · 사진 · 게시 · 곰이 봄</li>
+    <li><b>3 침실</b> 댓글 첫 글자 <b>PRIVATE</b> → 쪽지 YMNSP GJKTWJ DTZ UTXY를 5칸 앞으로 = <b>THINK BEFORE YOU POST</b> → 모스 부호 <b>DELETE</b></li>
+    <li><b>4 현관</b> 번호 <b>9543</b> (집 9, 카드 5, 단어 4, 해시태그 3) → 범인 <b>Goldilocks</b> (금발 + 알리바이 나쁨)</li>
+  </ul>
+  <p class="sub">시간이 부족하면 "이 자물쇠 건너뛰기"로 진행을 맞출 수 있어요.</p>
+  <div class="actions">
+    <button type="button" class="btn ghost" id="tPlus">시간 +1분</button>
+    <button type="button" class="btn ghost" id="tSkip">이 자물쇠 건너뛰기</button>
+    <button type="button" class="btn ghost" id="tReset">처음부터</button>
+    <button type="button" class="btn ghost" id="tClose">닫기</button>
+  </div>
+</aside>
+
+<div class="modal" id="timeup" hidden role="dialog" aria-modal="true" aria-labelledby="h-timeup">
+  <div class="modal-in">
+    <h2 id="h-timeup">시간 종료!</h2>
+    <p>곰 가족이 먼저 경찰에 신고해 버렸어요. 그래도 끝까지 범인을 찾아볼까요?</p>
+    <div class="actions">
+      <button type="button" class="btn" id="btnKeep">시간 없이 계속 풀기</button>
+      <button type="button" class="btn ghost" id="btnRestart">처음부터</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var ROOMS=['r1','r2','r3','r4'];
+  var LOCKS=['hunt','safe','mirror','alibi','fridge','order','acro','caesar','morse','door','accuse'];
+  var ROOMLOCKS={r1:['hunt','safe','mirror'],r2:['alibi','fridge','order'],r3:['acro','caesar','morse'],r4:['door','accuse']};
+  var STORY=[
+    {en:'The bears left home for a walk.',ko:'곰 가족은 산책하러 집을 나갔어요.'},
+    {en:'Goldilocks opened the door and went in.',ko:'골디락스가 문을 열고 들어갔어요.'},
+    {en:'She took photos of the house.',ko:'그녀는 집 사진을 찍었어요.'},
+    {en:'She posted them online with #NoOneHome.',ko:'그녀는 #NoOneHome 해시태그와 함께 사진을 올렸어요.'},
+    {en:'The bears came home and saw the post.',ko:'곰 가족이 집에 돌아와 게시물을 봤어요.'}
+  ];
+  var MORSE={A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..'};
+  var MORSE_WORD='DELETE';
+  var ANS={safe:'943',fridge:'35',door:'9543'};
+
+  var HOT={
+    addr:{en:'Home address: No. 9 Pine Road',ko:'집 주소가 그대로 보여요. 누구나 찾아올 수 있어요.'},
+    key:{en:'Spare key',ko:'열쇠를 어디에 두는지 보여요. 빈집이라는 것도 알려 줘요.'},
+    mirror:{en:'Reflection in the mirror',ko:'거울에 사진 찍은 사람이 비쳤어요! 금발에 분홍색 폰케이스예요.'}
+  };
+  var HINTS={
+    hunt:['벽, 열쇠 걸이, 거울을 자세히 보세요. 개인정보가 보이는 곳이 3군데 있어요.','아직 못 찾은 곳 하나를 깜빡이게 해 줄게요.'],
+    mirror:['글씨가 좌우로 뒤집혀 있어요. 거울에 비춘 글자를 읽는 것처럼 오른쪽 끝에서부터 읽어 보세요.','두 번째 힌트를 보면 글씨가 바로 보여요. 비밀번호는 영어 단어 1개예요. (5글자)'],
+    order:['순서대로 일어난 일을 생각해 보세요. 곰이 집을 나간 일이 가장 먼저예요.','사진을 찍은 뒤에 올렸어요. 곰이 돌아와 게시물을 본 일은 마지막이에요.'],
+    morse:['점(●)과 선(▬)의 묶음 하나가 영어 글자 하나예요. 아래 모스 부호표에서 찾아보세요.','모두 6글자예요. 첫 글자는 D(-..), 두 번째 글자는 E(.)예요.','골디락스가 사진에 대해 해야 하는 행동이에요. DEL_ _ _ 를 이어서 채워 보세요.'],
+    safe:['세 자리 번호예요. 1) 번호판 숫자 2) 창밖 소나무 수 3) 의자 수 순서예요.','소나무는 4그루, 의자는 3개예요. 번호판 숫자는 이미 찾았어요.'],
+    alibi:['알리바이에는 증인이나 증거가 필요해요. 증거가 있는 사람은 누구인가요?','냉장고 달력을 보세요. 토요일에 학교에 가나요?'],
+    fridge:['집을 나간 시간부터 게시물이 올라온 시간까지 몇 분인지 구해요.','2:40 PM에서 3:15 PM까지는 몇 분일까요? 두 자리 숫자예요.'],
+    acro:['각 댓글의 첫 글자만 위에서 아래로 읽어 보세요.','첫 글자는 P, R, I … 이어서 읽으면 영어 단어 하나가 돼요. (7글자)'],
+    caesar:['금고에서 나온 열쇠 카드의 숫자를 확인하고, 해독표의 칸 수를 그 숫자로 맞춰요.','열쇠 카드 숫자는 5예요. 암호 Y는 진짜 T예요.','첫 단어는 THINK예요. 나머지 단어도 같은 방법으로 풀어요.'],
+    door:['4자리 순서: 번호판 숫자, 열쇠 카드 숫자, 쪽지 단어 수, 해시태그 수예요.','해시태그는 # 이 붙은 말이에요. 게시물에서 세어 보세요. 쪽지는 THINK BEFORE YOU POST예요.'],
+    accuse:['거울 속 사람의 머리 색과, 알리바이가 나쁜 두 사람을 함께 보세요.','머리 색이 같은 두 사람 중에서 알리바이가 나쁜 사람은 누구일까요?']
+  };
+  var SUS=[
+    {id:'red',name:'Little Red',ini:'R',hair:['#2B2222','검정','Black'],phone:['#D8353F','빨강','Red'],why:'Little Red는 3시 15분에 할머니 집에서 케이크를 먹고 있었어요.'},
+    {id:'jack',name:'Jack',ini:'J',hair:['#7A4B2A','갈색','Brown'],phone:['#2F6DB5','파랑','Blue'],why:'Jack은 머리가 갈색이에요. 거울 속 사람은 금발이었어요.'},
+    {id:'goldi',name:'Goldilocks',ini:'G',hair:['#F2C94C','금발','Blonde'],phone:['#EE82B4','분홍','Pink'],why:''},
+    {id:'gretel',name:'Gretel',ini:'G',hair:['#EBC95B','금발','Blonde'],phone:['#EE82B4','분홍','Pink'],why:'Gretel은 3시 15분에 빵집에서 찍힌 사진이 있어요. 곰네 집에 있을 수 없어요.'}
+  ];
+
+  function fresh(total){
+    var d={},h={};
+    LOCKS.forEach(function(k){d[k]=false;h[k]=0;});
+    return {screen:'intro',total:600,t0:0,pen:0,limit:true,running:false,paused:false,
+      hints:h,done:d,found:[],pulse:null,pick2:[],pick4:null,shift:1,wrong:0,order:[2,4,0,3,1],
+      dial:{safe:[0,0,0],fridge:[0,0],door:[0,0,0,0]}};
+  }
+  var S=fresh();
+  var teacher=false;
+
+  function fmt(sec){
+    sec=Math.max(0,Math.round(sec));
+    var m=Math.floor(sec/60),s=sec%60;
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+  function setTimer(l){
+    var bar=$('#bar');
+    if(!S.limit){$('#tVal').textContent='--:--';$('#tFill').style.width='0%';bar.classList.remove('low');return;}
+    $('#tVal').textContent=fmt(Math.ceil(l));
+    $('#tFill').style.width=Math.max(0,Math.min(100,l/S.total*100))+'%';
+    bar.classList.toggle('low',l<=60&&S.running);
+  }
+  function tick(){
+    if(!S.running||S.paused)return;
+    if(!S.limit){setTimer(0);return;}
+    var l=S.total-(Date.now()-S.t0)/1000-S.pen;
+    setTimer(l);
+    if(l<=0){S.paused=true;$('#timeup').hidden=false;$('#btnKeep').focus();}
+  }
+  function penalize(n){
+    S.pen+=n;
+    var p=$('#pen');
+    p.textContent='-'+n+'초';
+    p.classList.remove('show');
+    void p.offsetWidth;
+    p.classList.add('show');
+    if(S.running)tick();
+  }
+  function say(id,text,cls){
+    var el=$(id);
+    el.className='msg'+(cls?' '+cls:'');
+    el.textContent='';
+    void el.offsetWidth;
+    el.textContent=text;
+  }
+  function norm(v){return String(v).toUpperCase().replace(/[^A-Z]/g,'');}
+
+  function go(id){
+    S.screen=id;
+    $$('.stage > .screen').forEach(function(s){s.hidden=(s.id!=='s-'+id);});
+    $('#layout').classList.toggle('solo',id==='intro'||id==='end');
+    render();
+    var h=$('#s-'+id+' h1, #s-'+id+' h2');
+    if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true});}
+    window.scrollTo(0,0);
+  }
+
+  function renderKey(){
+    var a='ABCDEFGHIJKLMNOPQRSTUVWXYZ',key='';
+    [0,13].forEach(function(st){
+      key+='<div class="keyrow">';
+      for(var i=st;i<st+13;i++){
+        key+='<div><span>'+a[i]+'</span><b>'+a[((i-S.shift)%26+26)%26]+'</b></div>';
+      }
+      key+='</div>';
+    });
+    $('#key').innerHTML=key+'<p class="sub">위: 암호 글자 → 아래: 진짜 글자 (옮긴 칸 수 '+S.shift+')</p>';
+  }
+
+  function render(){
+    var idx=ROOMS.indexOf(S.screen);
+    $$('#steps li').forEach(function(li,i){
+      li.classList.toggle('now',i===idx);
+      li.classList.toggle('done',S.screen==='end'||(idx>=0&&i<idx));
+    });
+    $('#lockCount').textContent='자물쇠 '+LOCKS.filter(function(k){return S.done[k];}).length+'/'+LOCKS.length;
+
+    /* notebook */
+    var items=[
+      {on:S.found.indexOf('addr')>=0,tag:'ITEM',h:'집 주소',en:'No. 9 Pine Road',ko:'거실 번호판에서 찾았어요.'},
+      {on:S.found.indexOf('mirror')>=0,tag:'EVIDENCE',h:'거울 속 사람',en:'The poster has yellow hair and a pink phone case.',ko:'범인은 노란 머리(금발)에 분홍색 폰케이스를 갖고 있어요.'},
+      {on:S.done.safe,tag:'ITEM',h:'열쇠 카드',en:'KEY CARD: 5',ko:'금고에서 나왔어요. 나중에 써요.'},
+      {on:S.done.alibi,tag:'EVIDENCE',h:'알리바이',en:'Jack and Goldilocks have no good alibi.',ko:'Jack은 토요일엔 학교에 가지 않고, Goldilocks는 증인이 없어요.'},
+      {on:S.done.mirror,tag:'ITEM',h:'엄마곰의 비밀번호',en:'The password is HONEY.',ko:'거울글씨 편지에서 찾았어요.'},
+      {on:S.done.order,tag:'EVIDENCE',h:'사건 순서',en:'Left home → came in → took photos → posted → bears saw it.',ko:'곰이 없는 사이에 골디락스가 몰래 들어가 사진을 올렸어요.'},
+      {on:S.done.caesar,tag:'ITEM',h:'아기곰의 메시지',en:'THINK BEFORE YOU POST',ko:'올리기 전에 한 번 더 생각해!'},
+      {on:S.done.morse,tag:'ITEM',h:'손전등 신호',en:'DELETE',ko:'골디락스에게 보내는 말: 지워!'}
+    ];
+    var nb='';
+    items.forEach(function(it){
+      nb+=it.on
+        ?'<li class="nb"><span class="tag">'+it.tag+'</span><h3>'+it.h+'</h3><p class="en">'+it.en+'</p><p class="sub">'+it.ko+'</p></li>'
+        :'<li class="nb locked"><span class="tag">???</span><h3>아직 찾지 못했어요</h3></li>';
+    });
+    $('#nbList').innerHTML=nb;
+
+    /* lock boxes */
+    $$('.lockbox').forEach(function(box){
+      var l=box.getAttribute('data-l'),need=box.getAttribute('data-need');
+      if(need)box.hidden=!S.done[need];
+      box.classList.toggle('open',!!S.done[l]);
+    });
+
+    /* room 1 */
+    $$('#r1svg .hot').forEach(function(g){
+      var k=g.getAttribute('data-k');
+      g.classList.toggle('found',S.found.indexOf(k)>=0);
+      g.classList.toggle('pulse',S.pulse===k);
+    });
+    var sl='';
+    for(var i=0;i<3;i++){
+      var k=S.found[i];
+      sl+=k
+        ?'<li class="slot on"><span class="mk">✓</span><div><b class="typed">'+HOT[k].en+'</b><p class="sub">'+HOT[k].ko+'</p></div></li>'
+        :'<li class="slot"><span class="mk">?</span><div class="sub">아직 못 찾았어요</div></li>';
+    }
+    $('#slots').innerHTML=sl;
+    $('#r1Count').textContent=S.found.length+' / 3 발견';
+    $('#keycard').hidden=!S.done.safe;
+    $('#next1').disabled=!S.done.mirror;
+    $('#mirrorTxt').classList.toggle('fixed',S.hints.mirror>=2||S.done.mirror);
+    $('#mir').disabled=S.done.mirror;
+    $('#checkMir').disabled=S.done.mirror;
+    $('#mor').disabled=S.done.morse;
+    $('#checkMor').disabled=S.done.morse;
+    $('#checkOrder').disabled=S.done.order;
+    var ol='';
+    S.order.forEach(function(id,i){
+      ol+='<li class="oc"><div class="oc-t"><span class="typed">'+STORY[id].en+'</span><span class="ko">'+STORY[id].ko+'</span></div>'
+        +'<div class="oc-b"><button type="button" class="mv" data-i="'+i+'" data-dir="-1" aria-label="위로"'+((i===0||S.done.order)?' disabled':'')+'>▲</button>'
+        +'<button type="button" class="mv" data-i="'+i+'" data-dir="1" aria-label="아래로"'+((i===S.order.length-1||S.done.order)?' disabled':'')+'>▼</button></div></li>';
+    });
+    $('#ordList').innerHTML=ol;
+
+    /* dials */
+    $$('.dial').forEach(function(d){
+      var id=d.getAttribute('data-d'),digits=S.dial[id];
+      $$('.dg',d).forEach(function(el,i){el.textContent=digits[i];});
+      $$('.wh',d).forEach(function(b){b.disabled=!!S.done[id];});
+    });
+    $('#checkSafe').disabled=S.done.safe;
+    $('#checkFridge').disabled=S.done.fridge;
+    $('#checkDoor').disabled=S.done.door;
+
+    /* room 2 */
+    $$('#fridge .case-card').forEach(function(b){
+      b.setAttribute('aria-pressed',S.pick2.indexOf(b.getAttribute('data-k'))>=0?'true':'false');
+      b.disabled=S.done.alibi;
+    });
+    $('#checkAlibi').disabled=S.done.alibi||S.pick2.length!==2;
+    $('#next2').disabled=!S.done.order;
+
+    /* room 3 */
+    $('#acro').disabled=S.done.acro;
+    $('#checkAcro').disabled=S.done.acro;
+    $('#cz').disabled=S.done.caesar;
+    $('#checkCz').disabled=S.done.caesar;
+    $('#shVal').textContent=S.shift;
+    renderKey();
+    $('#next3').disabled=!S.done.morse;
+
+    /* room 4 */
+    $$('#susGrid .sus').forEach(function(b){
+      b.setAttribute('aria-pressed',S.pick4===b.getAttribute('data-k')?'true':'false');
+    });
+    $('#check4').disabled=!S.pick4||S.done.accuse;
+
+    /* hints */
+    $$('.hintbox').forEach(function(box){
+      var r=box.getAttribute('data-r'),n=S.hints[r],max=HINTS[r].length;
+      var btn=$('.hint-btn',box);
+      btn.disabled=n>=max||!!S.done[r];
+      btn.textContent=n>=max?'힌트를 모두 봤어요':'힌트 보기 (-20초) · 남은 힌트 '+(max-n)+'개';
+      var h='';
+      for(var j=0;j<n;j++)h+='<li>'+HINTS[r][j]+'</li>';
+      $('.hint-list',box).innerHTML=h;
+    });
+  }
+
+  function buildStatic(){
+    $$('.dial').forEach(function(d){
+      var n=parseInt(d.getAttribute('data-len'),10),h='';
+      for(var i=0;i<n;i++){
+        h+='<div class="col"><button type="button" class="wh" data-i="'+i+'" data-dir="1" aria-label="'+(i+1)+'번째 숫자 올리기">▲</button>'
+          +'<div class="dg">0</div>'
+          +'<button type="button" class="wh" data-i="'+i+'" data-dir="-1" aria-label="'+(i+1)+'번째 숫자 내리기">▼</button></div>';
+      }
+      d.innerHTML=h;
+    });
+    var sus='';
+    ['red','jack','goldi','gretel'].forEach(function(id){
+      var p=SUS.filter(function(x){return x.id===id;})[0];
+      sus+='<button type="button" class="sus" data-k="'+p.id+'" aria-pressed="false">'
+        +'<span class="top"><span class="ini">'+p.ini+'</span><span class="nm">'+p.name+'</span></span>'
+        +'<dl><dt>머리</dt><dd><span class="sw" style="background:'+p.hair[0]+'"></span>'+p.hair[1]+' · '+p.hair[2]+'</dd>'
+        +'<dt>폰케이스</dt><dd><span class="sw" style="background:'+p.phone[0]+'"></span>'+p.phone[1]+' · '+p.phone[2]+'</dd></dl></button>';
+    });
+    $('#susGrid').innerHTML=sus;
+    function sym(code){
+      var h='';
+      code.split('').forEach(function(c){h+='<i class="'+(c==='.'?'dot':'dash')+'"></i>';});
+      return h;
+    }
+    var bl='';
+    MORSE_WORD.split('').forEach(function(ch){bl+='<span class="grp">'+sym(MORSE[ch])+'</span>';});
+    $('#blink').innerHTML=bl;
+    var mc='';
+    Object.keys(MORSE).forEach(function(k){mc+='<div class="mc"><b>'+k+'</b><span>'+sym(MORSE[k])+'</span></div>';});
+    $('#morseChart').innerHTML=mc;
+  }
+
+  /* ---------- flow ---------- */
+  function start(){
+    S=fresh();
+    S.t0=Date.now();S.running=true;
+    clearInterval(window.__bearIv);
+    window.__bearIv=setInterval(tick,250);
+    setTimer(S.total);
+    go('r1');
+  }
+  function reset(){
+    clearInterval(window.__bearIv);
+    S=fresh();
+    $$('input').forEach(function(i){i.value='';});
+    $$('.msg').forEach(function(m){m.className='msg';m.textContent='';});
+    $('#timeup').hidden=true;
+    $('#bar').classList.remove('low');
+    setTimer(S.total);
+    go('intro');
+  }
+  function finish(){
+    S.running=false;clearInterval(window.__bearIv);
+    var secs=(Date.now()-S.t0)/1000+S.pen;
+    var used=0;LOCKS.forEach(function(k){used+=S.hints[k];});
+    $('#stTime').textContent=fmt(secs);
+    $('#stHint').textContent=used+'회';
+    $('#stWrong').textContent=S.wrong+'회';
+    var within=S.limit&&secs<=S.total;
+    $('#endTitle').textContent=within?'탈출 성공! 범인은 Goldilocks':'범인은 Goldilocks! 끝까지 풀었어요';
+    $('#endLead').textContent='골디락스는 곰 가족이 없는 집에 몰래 들어가 사진을 찍고, 허락 없이 SNS에 올렸어요. 사진에는 집 주소와 열쇠 위치까지 찍혀 있었어요.';
+    $('#bar').classList.remove('low');
+    go('end');
+  }
+
+  function find(k){
+    if(S.found.indexOf(k)>=0)return;
+    S.found.push(k);
+    if(S.pulse===k)S.pulse=null;
+    if(S.found.length===3)S.done.hunt=true;
+    render();
+  }
+  function ping(e){
+    var svg=$('#r1svg');
+    if(!svg.createSVGPoint||!svg.getScreenCTM)return;
+    var pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+    var p=pt.matrixTransform(svg.getScreenCTM().inverse());
+    var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('class','ping');
+    svg.appendChild(c);
+    setTimeout(function(){if(c.parentNode)c.parentNode.removeChild(c);},700);
+  }
+
+  function checkDial(id,msgId,okText,badText){
+    if(S.done[id])return;
+    if(S.dial[id].join('')===ANS[id]){
+      S.done[id]=true;say(msgId,okText,'good');render();
+    }else{
+      S.wrong++;penalize(10);say(msgId,badText+' (-10초)','bad');
+    }
+  }
+
+  function setTeacher(on){teacher=on;$('#teacher').hidden=!on;}
+  function solveLock(k){
+    if(k==='hunt'){S.found=['addr','key','mirror'];S.pulse=null;}
+    if(k==='safe')S.dial.safe=[9,4,3];
+    if(k==='alibi')S.pick2=['jack','goldi'];
+    if(k==='fridge')S.dial.fridge=[3,5];
+    if(k==='acro')$('#acro').value='PRIVATE';
+    if(k==='caesar'){S.shift=5;$('#cz').value='THINK BEFORE YOU POST';}
+    if(k==='mirror')$('#mir').value='HONEY';
+    if(k==='order')S.order=[0,1,2,3,4];
+    if(k==='morse')$('#mor').value='DELETE';
+    if(k==='door')S.dial.door=[9,5,4,3];
+    if(k==='accuse')S.pick4='goldi';
+    S.done[k]=true;
+  }
+  function skipLock(){
+    var i=ROOMS.indexOf(S.screen);
+    if(i<0)return;
+    var un=ROOMLOCKS[S.screen].filter(function(k){return !S.done[k];});
+    if(un.length){
+      solveLock(un[0]);
+      if(un[0]==='accuse'){finish();return;}
+      render();
+    }else if(i<3){go(ROOMS[i+1]);}
+  }
+
+  /* ---------- events ---------- */
+  $('#koBtn').addEventListener('click',function(){
+    var on=!document.body.classList.contains('ko-on');
+    document.body.classList.toggle('ko-on',on);
+    this.setAttribute('aria-pressed',on?'true':'false');
+  });
+  $('#btnStart').addEventListener('click',start);
+  $('#btnAgain').addEventListener('click',reset);
+  $('#btnRestart').addEventListener('click',reset);
+  $('#btnKeep').addEventListener('click',function(){
+    S.limit=false;S.paused=false;$('#timeup').hidden=true;setTimer(0);
+  });
+
+  $$('.hint-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var r=btn.parentNode.getAttribute('data-r');
+      if(S.hints[r]>=HINTS[r].length||S.done[r])return;
+      S.hints[r]++;
+      if(r==='hunt'&&S.hints.hunt>=2){
+        var rest=['addr','key','mirror'].filter(function(k){return S.found.indexOf(k)<0;});
+        S.pulse=rest.length?rest[0]:null;
+      }
+      penalize(20);
+      render();
+    });
+  });
+
+  var svg1=$('#r1svg');
+  svg1.addEventListener('click',function(e){
+    var hot=e.target.closest('.hot');
+    if(hot){find(hot.getAttribute('data-k'));return;}
+    ping(e);
+  });
+  svg1.addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    var hot=e.target.closest('.hot');
+    if(hot){e.preventDefault();find(hot.getAttribute('data-k'));}
+  });
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.wh');
+    if(!b)return;
+    var d=b.closest('.dial');if(!d)return;
+    var id=d.getAttribute('data-d'),i=parseInt(b.getAttribute('data-i'),10),dir=parseInt(b.getAttribute('data-dir'),10);
+    if(S.done[id])return;
+    S.dial[id][i]=(S.dial[id][i]+dir+10)%10;
+    render();
+  });
+
+  $('#checkSafe').addEventListener('click',function(){
+    checkDial('safe','#msgSafe','딸깍! 금고가 열렸어요. 안에 열쇠 카드가 있어요.','열리지 않아요. 번호판 숫자, 창밖 소나무, 의자를 하나씩 다시 세어 보세요.');
+  });
+  function checkMir(){
+    if(S.done.mirror)return;
+    if(norm($('#mir').value)==='HONEY'){
+      S.done.mirror=true;say('#msgMir','맞아요! 엄마곰의 비밀번호는 HONEY예요.','good');render();
+    }else{
+      S.wrong++;penalize(10);say('#msgMir','비밀번호가 아니에요. 뒤집힌 글씨를 거울에 비춘다고 생각하고 읽어 보세요. (-10초)','bad');
+    }
+  }
+  $('#checkMir').addEventListener('click',checkMir);
+  $('#mir').addEventListener('keydown',function(e){if(e.key==='Enter')checkMir();});
+  $('#next1').addEventListener('click',function(){go('r2');});
+
+  $('#ordList').addEventListener('click',function(e){
+    var b=e.target.closest('.mv');
+    if(!b||S.done.order)return;
+    var i=parseInt(b.getAttribute('data-i'),10),j=i+parseInt(b.getAttribute('data-dir'),10);
+    if(j<0||j>=S.order.length)return;
+    var t=S.order[i];S.order[i]=S.order[j];S.order[j]=t;
+    say('#msgOrder','');
+    render();
+  });
+  $('#checkOrder').addEventListener('click',function(){
+    if(S.done.order)return;
+    var ok=S.order.every(function(v,i){return v===i;});
+    if(ok){S.done.order=true;say('#msgOrder','순서가 맞아요! 곰이 없는 사이에 일어난 일이에요.','good');render();}
+    else{
+      var n=S.order.filter(function(v,i){return v===i;}).length;
+      S.wrong++;penalize(10);
+      say('#msgOrder','순서가 달라요. 지금 제자리에 있는 문장은 '+n+'개예요. (-10초)','bad');
+    }
+  });
+
+  $('#fridge').addEventListener('click',function(e){
+    var b=e.target.closest('.case-card');
+    if(!b||S.done.alibi)return;
+    var k=b.getAttribute('data-k'),i=S.pick2.indexOf(k);
+    if(i>=0)S.pick2.splice(i,1);
+    else{S.pick2.push(k);if(S.pick2.length>2)S.pick2.shift();}
+    say('#msgAlibi','');
+    render();
+  });
+  $('#checkAlibi').addEventListener('click',function(){
+    var good=S.pick2.filter(function(k){return k==='jack'||k==='goldi';}).length;
+    if(S.pick2.length===2&&good===2){
+      S.done.alibi=true;
+      say('#msgAlibi','정답이에요! Jack의 알리바이는 거짓말이고, Goldilocks는 증인이 없어요.','good');
+      render();
+    }else{
+      S.wrong++;penalize(10);
+      say('#msgAlibi',(good===1?'한 명은 맞았어요! 나머지 한 명을 다시 읽어 보세요.':'다시 읽어 보세요. 증인이나 증거가 있는 사람은 알리바이가 좋아요.')+' (-10초)','bad');
+    }
+  });
+  $('#checkFridge').addEventListener('click',function(){
+    checkDial('fridge','#msgFridge','딸깍! 냉장고가 열리고 아기곰의 태블릿이 나왔어요.','다시 계산해 보세요. 2:40 PM에서 3:15 PM까지 몇 분일까요?');
+  });
+  $('#next2').addEventListener('click',function(){go('r3');});
+
+  function checkAcro(){
+    if(S.done.acro)return;
+    if(norm($('#acro').value)==='PRIVATE'){
+      S.done.acro=true;say('#msgAcro','잠금 해제! PRIVATE (개인적인, 사적인)','good');render();
+    }else{
+      S.wrong++;penalize(10);say('#msgAcro','태블릿이 열리지 않아요. 댓글의 첫 글자를 위에서 아래로 읽어 보세요. (-10초)','bad');
+    }
+  }
+  $('#checkAcro').addEventListener('click',checkAcro);
+  $('#acro').addEventListener('keydown',function(e){if(e.key==='Enter')checkAcro();});
+
+  $('#shUp').addEventListener('click',function(){S.shift=S.shift%25+1;render();});
+  $('#shDown').addEventListener('click',function(){S.shift=(S.shift+23)%25+1;render();});
+  function checkCz(){
+    if(S.done.caesar)return;
+    if(norm($('#cz').value)==='THINKBEFOREYOUPOST'){
+      S.done.caesar=true;say('#msgCz','해독 성공! 아기곰의 메시지는 “Think before you post.”예요.','good');render();
+    }else{
+      S.wrong++;penalize(10);say('#msgCz','뜻이 통하는 문장이 아니에요. 열쇠 카드 숫자만큼 칸 수를 맞췄는지 확인해 보세요. (-10초)','bad');
+    }
+  }
+  $('#checkCz').addEventListener('click',checkCz);
+  $('#cz').addEventListener('keydown',function(e){if(e.key==='Enter')checkCz();});
+  function checkMor(){
+    if(S.done.morse)return;
+    if(norm($('#mor').value)===MORSE_WORD){
+      S.done.morse=true;say('#msgMor','해독 성공! 손전등은 “DELETE (지워!)”라고 말하고 있었어요.','good');render();
+    }else{
+      S.wrong++;penalize(10);say('#msgMor','다시 해독해 보세요. 점과 선의 묶음 하나가 글자 하나예요. (-10초)','bad');
+    }
+  }
+  $('#checkMor').addEventListener('click',checkMor);
+  $('#mor').addEventListener('keydown',function(e){if(e.key==='Enter')checkMor();});
+  $('#next3').addEventListener('click',function(){go('r4');});
+
+  $('#checkDoor').addEventListener('click',function(){
+    checkDial('door','#msgDoor','철컥! 현관문이 열렸어요. 이제 범인을 지목하세요.','문이 열리지 않아요. 순서를 확인하세요: 번호판, 열쇠 카드, 쪽지 단어 수, 해시태그 수.');
+  });
+  $('#susGrid').addEventListener('click',function(e){
+    var b=e.target.closest('.sus');if(!b)return;
+    S.pick4=b.getAttribute('data-k');
+    say('#msg4','');
+    render();
+  });
+  $('#check4').addEventListener('click',function(){
+    if(S.pick4==='goldi'){S.done.accuse=true;finish();return;}
+    var p=SUS.filter(function(x){return x.id===S.pick4;})[0];
+    S.wrong++;penalize(30);
+    say('#msg4',p.why+' (-30초)','bad');
+  });
+
+  /* teacher mode: add #teacher to the link, or tap the CASE label 5 times */
+  var taps=0,tapT=0;
+  $('#caseTap').addEventListener('click',function(){
+    var n=Date.now();taps=(n-tapT<1200)?taps+1:1;tapT=n;
+    if(taps>=5){taps=0;setTeacher(!teacher);}
+  });
+  window.addEventListener('hashchange',function(){setTeacher(location.hash==='#teacher');});
+  $('#tPlus').addEventListener('click',function(){S.total+=60;if(S.running)tick();else setTimer(S.total);});
+  $('#tSkip').addEventListener('click',skipLock);
+  $('#tReset').addEventListener('click',reset);
+  $('#tClose').addEventListener('click',function(){setTeacher(false);});
+
+  buildStatic();
+  setTimer(S.total);
+  go('intro');
+  if(location.hash==='#teacher')setTeacher(true);
+})();
+</script>
+
+</body></html>
